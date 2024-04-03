@@ -523,3 +523,9 @@ def repr_string(obj,private=True):
         if type(val).__name__ not in ["method","function"]:
             s.append(pretty_str(key,val))
     return type(obj).__name__+" object\n"+"\n".join(s)
+
+
+#new -added by MB 2024
+def approx(x):
+    return round(x,8)
+
