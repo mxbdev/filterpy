@@ -24,7 +24,7 @@ import sys
 import numpy as np
 from numpy import eye,zeros,dot,isscalar,outer
 from scipy.linalg import cholesky
-import kalman.unscented_transform
+from  kalman.unscented_transform  import unscented_transform
 from stats.stats import logpdf
 from common.helpers import pretty_str
 

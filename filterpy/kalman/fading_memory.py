@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=invalid-name, too-many-arguments, too-many-instance-attributes
 
-
 """Copyright 2015 Roger R Labbe Jr.
 
 FilterPy library.
@@ -17,17 +16,17 @@ This is licensed under an MIT license. See the readme.MD file
 for more information.
 """
 
-
-from __future__ import (absolute_import, division, unicode_literals)
+from __future__ import (absolute_import,division,unicode_literals)
 from copy import deepcopy
-from math import log, exp, sqrt
+from math import log,exp,sqrt
 import sys
 import warnings
 import numpy as np
-from numpy import dot, zeros, eye
+from numpy import dot,zeros,eye
 import scipy.linalg as linalg
-from filterpy.stats import logpdf
-from filterpy.common import pretty_str
+from stats.stats import logpdf
+from common.helpers import pretty_str
+
 
 class FadingKalmanFilter(object):
     """
@@ -142,57 +141,56 @@ class FadingKalmanFilter(object):
     https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python
     """
 
-
-    def __init__(self, alpha, dim_x, dim_z, dim_u=0):
+    def __init__(self,alpha,dim_x,dim_z,dim_u=0):
 
         warnings.warn(
             "Use KalmanFilter class instead; it also provides the alpha attribute",
             DeprecationWarning)
 
-        assert alpha >= 1
-        assert dim_x > 0
-        assert dim_z > 0
-        assert dim_u >= 0
+        assert alpha>=1
+        assert dim_x>0
+        assert dim_z>0
+        assert dim_u>=0
 
-        self.alpha_sq = alpha**2
-        self.dim_x = dim_x
-        self.dim_z = dim_z
-        self.dim_u = dim_u
+        self.alpha_sq=alpha**2
+        self.dim_x=dim_x
+        self.dim_z=dim_z
+        self.dim_u=dim_u
 
-        self.x = zeros((dim_x, 1))     # state
-        self.P = eye(dim_x)            # uncertainty covariance
-        self.Q = eye(dim_x)            # process uncertainty
-        self.B = 0.                    # control transition matrix
-        self.F = np.eye(dim_x)         # state transition matrix
-        self.H = zeros((dim_z, dim_x)) # Measurement function
-        self.R = eye(dim_z)            # state uncertainty
-        self.z = np.array([[None]*dim_z]).T
+        self.x=zeros((dim_x,1))     # state
+        self.P=eye(dim_x)            # uncertainty covariance
+        self.Q=eye(dim_x)            # process uncertainty
+        self.B=0.                    # control transition matrix
+        self.F=np.eye(dim_x)         # state transition matrix
+        self.H=zeros((dim_z,dim_x)) # Measurement function
+        self.R=eye(dim_z)            # state uncertainty
+        self.z=np.array([[None]*dim_z]).T
 
         # gain and residual are computed during the innovation step. We
         # save them so that in case you want to inspect them for various
         # purposes
-        self.K = 0 # kalman gain
-        self.y = zeros((dim_z, 1))
-        self.S = np.zeros((dim_z, dim_z))   # system uncertainty (measurement space)
-        self.SI = np.zeros((dim_z, dim_z))  # inverse system uncertainty
+        self.K=0 # kalman gain
+        self.y=zeros((dim_z,1))
+        self.S=np.zeros((dim_z,dim_z))   # system uncertainty (measurement space)
+        self.SI=np.zeros((dim_z,dim_z))  # inverse system uncertainty
 
         # identity matrix. Do not alter this.
-        self.I = np.eye(dim_x)
+        self.I=np.eye(dim_x)
 
         # Only computed only if requested via property
-        self._log_likelihood = log(sys.float_info.min)
-        self._likelihood = sys.float_info.min
-        self._mahalanobis = None
+        self._log_likelihood=log(sys.float_info.min)
+        self._likelihood=sys.float_info.min
+        self._mahalanobis=None
 
         # these will always be a copy of x,P after predict() is called
-        self.x_prior = self.x.copy()
-        self.P_prior = self.P.copy()
+        self.x_prior=self.x.copy()
+        self.P_prior=self.P.copy()
 
         # these will always be a copy of x,P after update() is called
-        self.x_post = self.x.copy()
-        self.P_post = self.P.copy()
+        self.x_post=self.x.copy()
+        self.P_post=self.P.copy()
 
-    def update(self, z, R=None):
+    def update(self,z,R=None):
         """
         Add a new measurement (z) to the kalman filter. If z is None, nothing
         is changed.
@@ -209,50 +207,50 @@ class FadingKalmanFilter(object):
         """
 
         if z is None:
-            self.z = np.array([[None]*self.dim_z]).T
-            self.x_post = self.x.copy()
-            self.P_post = self.P.copy()
+            self.z=np.array([[None]*self.dim_z]).T
+            self.x_post=self.x.copy()
+            self.P_post=self.P.copy()
             return
 
         if R is None:
-            R = self.R
+            R=self.R
         elif np.isscalar(R):
-            R = eye(self.dim_z) * R
+            R=eye(self.dim_z)*R
 
         # y = z - Hx
         # error (residual) between measurement and prediction
-        self.y = z - dot(self.H, self.x)
+        self.y=z-dot(self.H,self.x)
 
-        PHT = dot(self.P, self.H.T)
+        PHT=dot(self.P,self.H.T)
 
         # S = HPH' + R
         # project system uncertainty into measurement space
-        self.S = dot(self.H, PHT) + R
-        self.SI = linalg.inv(self.S)
+        self.S=dot(self.H,PHT)+R
+        self.SI=linalg.inv(self.S)
 
         # K = PH'inv(S)
         # map system uncertainty into kalman gain
-        self.K = PHT.dot(self.SI)
+        self.K=PHT.dot(self.SI)
 
         # x = x + Ky
         # predict new x with residual scaled by the kalman gain
-        self.x = self.x + dot(self.K, self.y)
+        self.x=self.x+dot(self.K,self.y)
 
         # P = (I-KH)P(I-KH)' + KRK'
-        I_KH = self.I - dot(self.K, self.H)
-        self.P = dot(I_KH, self.P).dot(I_KH.T) + dot(self.K, R).dot(self.K.T)
+        I_KH=self.I-dot(self.K,self.H)
+        self.P=dot(I_KH,self.P).dot(I_KH.T)+dot(self.K,R).dot(self.K.T)
 
         # save measurement and posterior state
-        self.z = deepcopy(z)
-        self.x_post = self.x.copy()
-        self.P_post = self.P.copy()
+        self.z=deepcopy(z)
+        self.x_post=self.x.copy()
+        self.P_post=self.P.copy()
 
             # set to None to force recompute
-        self._log_likelihood = None
-        self._likelihood = None
-        self._mahalanobis = None
+        self._log_likelihood=None
+        self._likelihood=None
+        self._mahalanobis=None
 
-    def predict(self, u=0):
+    def predict(self,u=0):
         """ Predict next position.
 
         Parameters
@@ -264,16 +262,16 @@ class FadingKalmanFilter(object):
         """
 
         # x = Fx + Bu
-        self.x = dot(self.F, self.x) + dot(self.B, u)
+        self.x=dot(self.F,self.x)+dot(self.B,u)
 
         # P = FPF' + Q
-        self.P = self.alpha_sq * dot(self.F, self.P).dot(self.F.T) + self.Q
+        self.P=self.alpha_sq*dot(self.F,self.P).dot(self.F.T)+self.Q
 
         # save prior
-        self.x_prior = self.x.copy()
-        self.P_prior = self.P.copy()
+        self.x_prior=self.x.copy()
+        self.P_prior=self.P.copy()
 
-    def batch_filter(self, zs, Rs=None, update_first=False):
+    def batch_filter(self,zs,Rs=None,update_first=False):
         """ Batch processes a sequences of measurements.
 
         Parameters
@@ -314,43 +312,42 @@ class FadingKalmanFilter(object):
             In other words `covariance[k,:,:]` is the covariance at step `k`.
         """
 
-        n = np.size(zs, 0)
+        n=np.size(zs,0)
         if Rs is None:
-            Rs = [None] * n
+            Rs=[None]*n
 
         #pylint: disable=bad-whitespace
 
         # mean estimates from Kalman Filter
-        means   = zeros((n, self.dim_x, 1))
-        means_p = zeros((n, self.dim_x, 1))
+        means=zeros((n,self.dim_x,1))
+        means_p=zeros((n,self.dim_x,1))
 
         # state covariances from Kalman Filter
-        covariances   = zeros((n, self.dim_x, self.dim_x))
-        covariances_p = zeros((n, self.dim_x, self.dim_x))
+        covariances=zeros((n,self.dim_x,self.dim_x))
+        covariances_p=zeros((n,self.dim_x,self.dim_x))
 
         if update_first:
-            for i, (z, r) in enumerate(zip(zs, Rs)):
-                self.update(z, r)
-                means[i, :]          = self.x
-                covariances[i, :, :] = self.P
+            for i,(z,r) in enumerate(zip(zs,Rs)):
+                self.update(z,r)
+                means[i,:]=self.x
+                covariances[i,:,:]=self.P
 
                 self.predict()
-                means_p[i, :]          = self.x
-                covariances_p[i, :, :] = self.P
+                means_p[i,:]=self.x
+                covariances_p[i,:,:]=self.P
         else:
-            for i, (z, r) in enumerate(zip(zs, Rs)):
+            for i,(z,r) in enumerate(zip(zs,Rs)):
                 self.predict()
-                means_p[i, :]          = self.x
-                covariances_p[i, :, :] = self.P
+                means_p[i,:]=self.x
+                covariances_p[i,:,:]=self.P
 
-                self.update(z, r)
-                means[i, :]          = self.x
-                covariances[i, :, :] = self.P
+                self.update(z,r)
+                means[i,:]=self.x
+                covariances[i,:,:]=self.P
 
-        return (means, covariances, means_p, covariances_p)
+        return (means,covariances,means_p,covariances_p)
 
-
-    def get_prediction(self, u=0):
+    def get_prediction(self,u=0):
         """ Predicts the next state of the filter and returns it. Does not
         alter the state of the filter.
 
@@ -367,19 +364,17 @@ class FadingKalmanFilter(object):
             State vector and covariance array of the prediction.
         """
 
-        x = dot(self.F, self.x) + dot(self.B, u)
-        P = self.alpha_sq * dot(self.F, self.P).dot(self.F.T) + self.Q
-        return (x, P)
+        x=dot(self.F,self.x)+dot(self.B,u)
+        P=self.alpha_sq*dot(self.F,self.P).dot(self.F.T)+self.Q
+        return (x,P)
 
-
-    def residual_of(self, z):
+    def residual_of(self,z):
         """ returns the residual for the given measurement (z). Does not alter
         the state of the filter.
         """
-        return z - dot(self.H, self.x)
+        return z-dot(self.H,self.x)
 
-
-    def measurement_of_state(self, x):
+    def measurement_of_state(self,x):
         """ Helper function that converts a state into a measurement.
 
         Parameters
@@ -394,8 +389,7 @@ class FadingKalmanFilter(object):
         z : np.array
             measurement corresponding to the given state
         """
-        return dot(self.H, x)
-
+        return dot(self.H,x)
 
     @property
     def alpha(self):
@@ -409,7 +403,7 @@ class FadingKalmanFilter(object):
         log-likelihood of the last measurement.
         """
         if self._log_likelihood is None:
-            self._log_likelihood = logpdf(x=self.y, cov=self.S)
+            self._log_likelihood=logpdf(x=self.y,cov=self.S)
         return self._log_likelihood
 
     @property
@@ -422,9 +416,9 @@ class FadingKalmanFilter(object):
         number >= sys.float_info.min.
         """
         if self._likelihood is None:
-            self._likelihood = exp(self.log_likelihood)
-            if self._likelihood == 0:
-                self._likelihood = sys.float_info.min
+            self._likelihood=exp(self.log_likelihood)
+            if self._likelihood==0:
+                self._likelihood=sys.float_info.min
         return self._likelihood
 
     @property
@@ -438,27 +432,27 @@ class FadingKalmanFilter(object):
         mahalanobis : float
         """
         if self._mahalanobis is None:
-            self._mahalanobis = sqrt(float(dot(dot(self.y.T, self.SI), self.y)))
+            self._mahalanobis=sqrt(float(dot(dot(self.y.T,self.SI),self.y)))
         return self._mahalanobis
 
     def __repr__(self):
         return '\n'.join([
             'FadingKalmanFilter object',
-            pretty_str('dim_x', self.x),
-            pretty_str('dim_z', self.x),
-            pretty_str('dim_u', self.dim_u),
-            pretty_str('x', self.x),
-            pretty_str('P', self.P),
-            pretty_str('F', self.F),
-            pretty_str('Q', self.Q),
-            pretty_str('R', self.R),
-            pretty_str('H', self.H),
-            pretty_str('K', self.K),
-            pretty_str('y', self.y),
-            pretty_str('S', self.S),
-            pretty_str('B', self.B),
-            pretty_str('likelihood', self.likelihood),
-            pretty_str('log-likelihood', self.log_likelihood),
-            pretty_str('mahalanobis', self.mahalanobis),
-            pretty_str('alpha', self.alpha)
+            pretty_str('dim_x',self.x),
+            pretty_str('dim_z',self.x),
+            pretty_str('dim_u',self.dim_u),
+            pretty_str('x',self.x),
+            pretty_str('P',self.P),
+            pretty_str('F',self.F),
+            pretty_str('Q',self.Q),
+            pretty_str('R',self.R),
+            pretty_str('H',self.H),
+            pretty_str('K',self.K),
+            pretty_str('y',self.y),
+            pretty_str('S',self.S),
+            pretty_str('B',self.B),
+            pretty_str('likelihood',self.likelihood),
+            pretty_str('log-likelihood',self.log_likelihood),
+            pretty_str('mahalanobis',self.mahalanobis),
+            pretty_str('alpha',self.alpha)
             ])

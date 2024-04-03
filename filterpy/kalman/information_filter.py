@@ -16,15 +16,14 @@ This is licensed under an MIT license. See the readme.MD file
 for more information.
 """
 
-
-from __future__ import (absolute_import, division)
+from __future__ import (absolute_import,division)
 from copy import deepcopy
 import math
 import sys
 import numpy as np
-from numpy import dot, zeros, eye
-from filterpy.stats import logpdf
-from filterpy.common import pretty_str, reshape_z
+from numpy import dot,zeros,eye
+from stats.stats import logpdf
+from common.helpers import pretty_str,reshape_z
 
 
 class InformationFilter(object):
@@ -126,56 +125,54 @@ class InformationFilter(object):
     https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python
     """
 
+    def __init__(self,dim_x,dim_z,dim_u=0,compute_log_likelihood=True):
 
-    def __init__(self, dim_x, dim_z, dim_u=0, compute_log_likelihood=True):
-
-        if dim_x < 1:
+        if dim_x<1:
             raise ValueError('dim_x must be 1 or greater')
-        if dim_z < 1:
+        if dim_z<1:
             raise ValueError('dim_z must be 1 or greater')
-        if dim_u < 0:
+        if dim_u<0:
             raise ValueError('dim_u must be 0 or greater')
 
-        self.dim_x = dim_x
-        self.dim_z = dim_z
-        self.dim_u = dim_u
+        self.dim_x=dim_x
+        self.dim_z=dim_z
+        self.dim_u=dim_u
 
-        self.x = zeros((dim_x, 1)) # state
-        self.P_inv = eye(dim_x)   # uncertainty covariance
-        self.Q = eye(dim_x)       # process uncertainty
-        self.B = 0.               # control transition matrix
-        self._F = 0.              # state transition matrix
-        self._F_inv = 0.          # state transition matrix
-        self.H = np.zeros((dim_z, dim_x)) # Measurement function
-        self.R_inv = eye(dim_z)   # state uncertainty
-        self.z = np.array([[None]*self.dim_z]).T
+        self.x=zeros((dim_x,1)) # state
+        self.P_inv=eye(dim_x)   # uncertainty covariance
+        self.Q=eye(dim_x)       # process uncertainty
+        self.B=0.               # control transition matrix
+        self._F=0.              # state transition matrix
+        self._F_inv=0.          # state transition matrix
+        self.H=np.zeros((dim_z,dim_x)) # Measurement function
+        self.R_inv=eye(dim_z)   # state uncertainty
+        self.z=np.array([[None]*self.dim_z]).T
 
         # gain and residual are computed during the innovation step. We
         # save them so that in case you want to inspect them for various
         # purposes
-        self.K = 0. # kalman gain
-        self.y = zeros((dim_z, 1))
-        self.z = zeros((dim_z, 1))
-        self.S = 0. # system uncertainty in measurement space
+        self.K=0. # kalman gain
+        self.y=zeros((dim_z,1))
+        self.z=zeros((dim_z,1))
+        self.S=0. # system uncertainty in measurement space
 
         # identity matrix. Do not alter this.
-        self._I = np.eye(dim_x)
-        self._no_information = False
+        self._I=np.eye(dim_x)
+        self._no_information=False
 
-        self.compute_log_likelihood = compute_log_likelihood
-        self.log_likelihood = math.log(sys.float_info.min)
-        self.likelihood = sys.float_info.min
+        self.compute_log_likelihood=compute_log_likelihood
+        self.log_likelihood=math.log(sys.float_info.min)
+        self.likelihood=sys.float_info.min
 
-        self.inv = np.linalg.inv
+        self.inv=np.linalg.inv
 
         # save priors and posteriors
-        self.x_prior = np.copy(self.x)
-        self.P_inv_prior = np.copy(self.P_inv)
-        self.x_post = np.copy(self.x)
-        self.P_inv_post = np.copy(self.P_inv)
+        self.x_prior=np.copy(self.x)
+        self.P_inv_prior=np.copy(self.P_inv)
+        self.x_post=np.copy(self.x)
+        self.P_inv_post=np.copy(self.P_inv)
 
-
-    def update(self, z, R_inv=None):
+    def update(self,z,R_inv=None):
         """
         Add a new measurement (z) to the kalman filter. If z is None, nothing
         is changed.
@@ -192,57 +189,57 @@ class InformationFilter(object):
         """
 
         if z is None:
-            self.z = None
-            self.x_post = self.x.copy()
-            self.P_inv_post = self.P_inv.copy()
+            self.z=None
+            self.x_post=self.x.copy()
+            self.P_inv_post=self.P_inv.copy()
             return
 
         if R_inv is None:
-            R_inv = self.R_inv
+            R_inv=self.R_inv
         elif np.isscalar(R_inv):
-            R_inv = eye(self.dim_z) * R_inv
+            R_inv=eye(self.dim_z)*R_inv
 
         # rename for readability and a tiny extra bit of speed
-        H = self.H
-        H_T = H.T
-        P_inv = self.P_inv
-        x = self.x
+        H=self.H
+        H_T=H.T
+        P_inv=self.P_inv
+        x=self.x
 
         if self._no_information:
-            self.x = dot(P_inv, x) + dot(H_T, R_inv).dot(z)
-            self.P_inv = P_inv + dot(H_T, R_inv).dot(H)
-            self.log_likelihood = math.log(sys.float_info.min)
-            self.likelihood = sys.float_info.min
+            self.x=dot(P_inv,x)+dot(H_T,R_inv).dot(z)
+            self.P_inv=P_inv+dot(H_T,R_inv).dot(H)
+            self.log_likelihood=math.log(sys.float_info.min)
+            self.likelihood=sys.float_info.min
 
         else:
             # y = z - Hx
             # error (residual) between measurement and prediction
-            self.y = z - dot(H, x)
+            self.y=z-dot(H,x)
 
             # S = HPH' + R
             # project system uncertainty into measurement space
-            self.S = P_inv + dot(H_T, R_inv).dot(H)
-            self.K = dot(self.inv(self.S), H_T).dot(R_inv)
+            self.S=P_inv+dot(H_T,R_inv).dot(H)
+            self.K=dot(self.inv(self.S),H_T).dot(R_inv)
 
             # x = x + Ky
             # predict new x with residual scaled by the kalman gain
-            self.x = x + dot(self.K, self.y)
-            self.P_inv = P_inv + dot(H_T, R_inv).dot(H)
+            self.x=x+dot(self.K,self.y)
+            self.P_inv=P_inv+dot(H_T,R_inv).dot(H)
 
-            self.z = np.copy(reshape_z(z, self.dim_z, np.ndim(self.x)))
+            self.z=np.copy(reshape_z(z,self.dim_z,np.ndim(self.x)))
 
             if self.compute_log_likelihood:
-                self.log_likelihood = logpdf(x=self.y, cov=self.S)
-                self.likelihood = math.exp(self.log_likelihood)
-                if self.likelihood == 0:
-                    self.likelihood = sys.float_info.min
+                self.log_likelihood=logpdf(x=self.y,cov=self.S)
+                self.likelihood=math.exp(self.log_likelihood)
+                if self.likelihood==0:
+                    self.likelihood=sys.float_info.min
 
         # save measurement and posterior state
-        self.z = deepcopy(z)
-        self.x_post = self.x.copy()
-        self.P_inv_post = self.P_inv.copy()
+        self.z=deepcopy(z)
+        self.x_post=self.x.copy()
+        self.P_inv_post=self.P_inv.copy()
 
-    def predict(self, u=0):
+    def predict(self,u=0):
         """ Predict next position.
 
         Parameters
@@ -255,40 +252,40 @@ class InformationFilter(object):
 
         # x = Fx + Bu
 
-        A = dot(self._F_inv.T, self.P_inv).dot(self._F_inv)
+        A=dot(self._F_inv.T,self.P_inv).dot(self._F_inv)
         #pylint: disable=bare-except
         try:
-            AI = self.inv(A)
-            invertable = True
+            AI=self.inv(A)
+            invertable=True
             if self._no_information:
                 try:
-                    self.x = dot(self.inv(self.P_inv), self.x)
+                    self.x=dot(self.inv(self.P_inv),self.x)
                 except:
-                    self.x = dot(0, self.x)
-                self._no_information = False
+                    self.x=dot(0,self.x)
+                self._no_information=False
         except:
-            invertable = False
-            self._no_information = True
+            invertable=False
+            self._no_information=True
 
         if invertable:
-            self.x = dot(self._F, self.x) + dot(self.B, u)
-            self.P_inv = self.inv(AI + self.Q)
+            self.x=dot(self._F,self.x)+dot(self.B,u)
+            self.P_inv=self.inv(AI+self.Q)
 
             # save priors
-            self.P_inv_prior = np.copy(self.P_inv)
-            self.x_prior = np.copy(self.x)
+            self.P_inv_prior=np.copy(self.P_inv)
+            self.x_prior=np.copy(self.x)
         else:
-            I_PF = self._I - dot(self.P_inv, self._F_inv)
-            FTI = self.inv(self._F.T)
-            FTIX = dot(FTI, self.x)
-            AQI = self.inv(A + self.Q)
-            self.x = dot(FTI, dot(I_PF, AQI).dot(FTIX))
+            I_PF=self._I-dot(self.P_inv,self._F_inv)
+            FTI=self.inv(self._F.T)
+            FTIX=dot(FTI,self.x)
+            AQI=self.inv(A+self.Q)
+            self.x=dot(FTI,dot(I_PF,AQI).dot(FTIX))
 
             # save priors
-            self.x_prior = np.copy(self.x)
-            self.P_inv_prior = np.copy(AQI)
+            self.x_prior=np.copy(self.x)
+            self.P_inv_prior=np.copy(AQI)
 
-    def batch_filter(self, zs, Rs=None, update_first=False, saver=None):
+    def batch_filter(self,zs,Rs=None,update_first=False,saver=None):
         """ Batch processes a sequences of measurements.
 
         Parameters
@@ -330,37 +327,37 @@ class InformationFilter(object):
         # this is a copy of the code from kalman_filter, it has not been
         # turned into the information filter yet. DO NOT USE.
 
-        n = np.size(zs, 0)
+        n=np.size(zs,0)
         if Rs is None:
-            Rs = [None] * n
+            Rs=[None]*n
 
         # mean estimates from Kalman Filter
-        means = zeros((n, self.dim_x, 1))
+        means=zeros((n,self.dim_x,1))
 
         # state covariances from Kalman Filter
-        covariances = zeros((n, self.dim_x, self.dim_x))
+        covariances=zeros((n,self.dim_x,self.dim_x))
 
         if update_first:
-            for i, (z, r) in enumerate(zip(zs, Rs)):
-                self.update(z, r)
-                means[i, :] = self.x
-                covariances[i, :, :] = self._P
+            for i,(z,r) in enumerate(zip(zs,Rs)):
+                self.update(z,r)
+                means[i,:]=self.x
+                covariances[i,:,:]=self._P
                 self.predict()
 
                 if saver is not None:
                     saver.save()
         else:
-            for i, (z, r) in enumerate(zip(zs, Rs)):
+            for i,(z,r) in enumerate(zip(zs,Rs)):
                 self.predict()
-                self.update(z, r)
+                self.update(z,r)
 
-                means[i, :] = self.x
-                covariances[i, :, :] = self._P
+                means[i,:]=self.x
+                covariances[i,:,:]=self._P
 
                 if saver is not None:
                     saver.save()
 
-        return (means, covariances)
+        return (means,covariances)
 
     @property
     def F(self):
@@ -368,10 +365,10 @@ class InformationFilter(object):
         return self._F
 
     @F.setter
-    def F(self, value):
+    def F(self,value):
         """State Transition matrix"""
-        self._F = value
-        self._F_inv = self.inv(self._F)
+        self._F=value
+        self._F_inv=self.inv(self._F)
 
     @property
     def P(self):
@@ -381,24 +378,24 @@ class InformationFilter(object):
     def __repr__(self):
         return '\n'.join([
             'InformationFilter object',
-            pretty_str('dim_x', self.dim_x),
-            pretty_str('dim_z', self.dim_z),
-            pretty_str('dim_u', self.dim_u),
-            pretty_str('x', self.x),
-            pretty_str('P_inv', self.P_inv),
-            pretty_str('x_prior', self.x_prior),
-            pretty_str('P_inv_prior', self.P_inv_prior),
-            pretty_str('F', self.F),
-            pretty_str('_F_inv', self._F_inv),
-            pretty_str('Q', self.Q),
-            pretty_str('R_inv', self.R_inv),
-            pretty_str('H', self.H),
-            pretty_str('K', self.K),
-            pretty_str('y', self.y),
-            pretty_str('z', self.z),
-            pretty_str('S', self.S),
-            pretty_str('B', self.B),
-            pretty_str('log-likelihood', self.log_likelihood),
-            pretty_str('likelihood', self.likelihood),
-            pretty_str('inv', self.inv)
+            pretty_str('dim_x',self.dim_x),
+            pretty_str('dim_z',self.dim_z),
+            pretty_str('dim_u',self.dim_u),
+            pretty_str('x',self.x),
+            pretty_str('P_inv',self.P_inv),
+            pretty_str('x_prior',self.x_prior),
+            pretty_str('P_inv_prior',self.P_inv_prior),
+            pretty_str('F',self.F),
+            pretty_str('_F_inv',self._F_inv),
+            pretty_str('Q',self.Q),
+            pretty_str('R_inv',self.R_inv),
+            pretty_str('H',self.H),
+            pretty_str('K',self.K),
+            pretty_str('y',self.y),
+            pretty_str('z',self.z),
+            pretty_str('S',self.S),
+            pretty_str('B',self.B),
+            pretty_str('log-likelihood',self.log_likelihood),
+            pretty_str('likelihood',self.likelihood),
+            pretty_str('inv',self.inv)
             ])

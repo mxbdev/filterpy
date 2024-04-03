@@ -15,14 +15,14 @@ This is licensed under an MIT license. See the readme.MD file
 for more information.
 """
 
-
-from __future__ import (absolute_import, division, print_function,
+from __future__ import (absolute_import,division,print_function,
                         unicode_literals)
 
 import numpy as np
-from numpy import dot, zeros, eye
+from numpy import dot,zeros,eye
 from scipy.linalg import inv
-from filterpy.common import pretty_str
+from common.helpers import pretty_str
+
 
 class FixedLagSmoother(object):
     """ Fixed Lag Kalman smoother.
@@ -82,7 +82,7 @@ class FixedLagSmoother(object):
 
     """
 
-    def __init__(self, dim_x, dim_z, N=None):
+    def __init__(self,dim_x,dim_z,N=None):
         """ Create a fixed lag Kalman filter smoother. You are responsible for
         setting the various state variables to reasonable values; the defaults
         below will not give you a functional filter.
@@ -106,31 +106,31 @@ class FixedLagSmoother(object):
             using smooth_batch() function. Required if calling smooth()
         """
 
-        self.dim_x = dim_x
-        self.dim_z = dim_z
-        self.N = N
+        self.dim_x=dim_x
+        self.dim_z=dim_z
+        self.N=N
 
-        self.x = zeros((dim_x, 1))   # state
-        self.x_s = zeros((dim_x, 1)) # smoothed state
-        self.P = eye(dim_x)          # uncertainty covariance
-        self.Q = eye(dim_x)          # process uncertainty
-        self.F = eye(dim_x)          # state transition matrix
-        self.H = eye(dim_z, dim_x)   # Measurement function
-        self.R = eye(dim_z)          # state uncertainty
-        self.K = zeros((dim_x, 1))   # kalman gain
-        self.y = zeros((dim_z, 1))
-        self.B = 0.
-        self.S = zeros((dim_z, dim_z))
+        self.x=zeros((dim_x,1))   # state
+        self.x_s=zeros((dim_x,1)) # smoothed state
+        self.P=eye(dim_x)          # uncertainty covariance
+        self.Q=eye(dim_x)          # process uncertainty
+        self.F=eye(dim_x)          # state transition matrix
+        self.H=eye(dim_z,dim_x)   # Measurement function
+        self.R=eye(dim_z)          # state uncertainty
+        self.K=zeros((dim_x,1))   # kalman gain
+        self.y=zeros((dim_z,1))
+        self.B=0.
+        self.S=zeros((dim_z,dim_z))
 
         # identity matrix. Do not alter this.
-        self._I = np.eye(dim_x)
+        self._I=np.eye(dim_x)
 
-        self.count = 0
+        self.count=0
 
         if N is not None:
-            self.xSmooth = []
+            self.xSmooth=[]
 
-    def smooth(self, z, u=None):
+    def smooth(self,z,u=None):
         """ Smooths the measurement using a fixed lag smoother.
 
         On return, self.xSmooth is populated with the N previous smoothed
@@ -159,62 +159,62 @@ class FixedLagSmoother(object):
         """
 
         # take advantage of the fact that np.array are assigned by reference.
-        H = self.H
-        R = self.R
-        F = self.F
-        P = self.P
-        x = self.x
-        Q = self.Q
-        B = self.B
-        N = self.N
+        H=self.H
+        R=self.R
+        F=self.F
+        P=self.P
+        x=self.x
+        Q=self.Q
+        B=self.B
+        N=self.N
 
-        k = self.count
+        k=self.count
 
         # predict step of normal Kalman filter
-        x_pre = dot(F, x)
+        x_pre=dot(F,x)
         if u is not None:
-            x_pre += dot(B, u)
+            x_pre+=dot(B,u)
 
-        P = dot(F, P).dot(F.T) + Q
+        P=dot(F,P).dot(F.T)+Q
 
         # update step of normal Kalman filter
-        self.y = z - dot(H, x_pre)
+        self.y=z-dot(H,x_pre)
 
-        self.S = dot(H, P).dot(H.T) + R
-        SI = inv(self.S)
+        self.S=dot(H,P).dot(H.T)+R
+        SI=inv(self.S)
 
-        K = dot(P, H.T).dot(SI)
+        K=dot(P,H.T).dot(SI)
 
-        x = x_pre + dot(K, self.y)
+        x=x_pre+dot(K,self.y)
 
-        I_KH = self._I - dot(K, H)
-        P = dot(I_KH, P).dot(I_KH.T) + dot(K, R).dot(K.T)
+        I_KH=self._I-dot(K,H)
+        P=dot(I_KH,P).dot(I_KH.T)+dot(K,R).dot(K.T)
 
         self.xSmooth.append(x_pre.copy())
 
         #compute invariants
-        HTSI = dot(H.T, SI)
-        F_LH = (F - dot(K, H)).T
+        HTSI=dot(H.T,SI)
+        F_LH=(F-dot(K,H)).T
 
-        if k >= N:
-            PS = P.copy() # smoothed P for step i
+        if k>=N:
+            PS=P.copy() # smoothed P for step i
             for i in range(N):
-                K = dot(PS, HTSI)  # smoothed gain
-                PS = dot(PS, F_LH) # smoothed covariance
+                K=dot(PS,HTSI)  # smoothed gain
+                PS=dot(PS,F_LH) # smoothed covariance
 
-                si = k-i
-                self.xSmooth[si] = self.xSmooth[si] + dot(K, self.y)
+                si=k-i
+                self.xSmooth[si]=self.xSmooth[si]+dot(K,self.y)
         else:
             # Some sources specify starting the fix lag smoother only
             # after N steps have passed, some don't. I am getting far
             # better results by starting only at step N.
-            self.xSmooth[k] = x.copy()
+            self.xSmooth[k]=x.copy()
 
-        self.count += 1
-        self.x = x
-        self.P = P
+        self.count+=1
+        self.x=x
+        self.P=P
 
-    def smooth_batch(self, zs, N, us=None):
+    def smooth_batch(self,zs,N,us=None):
         """ batch smooths the set of measurements using a fixed lag smoother.
         I consider this function a somewhat pedalogical exercise; why would
         you not use a RTS smoother if you are able to batch process your data?
@@ -251,80 +251,80 @@ class FixedLagSmoother(object):
         """
 
         # take advantage of the fact that np.array are assigned by reference.
-        H = self.H
-        R = self.R
-        F = self.F
-        P = self.P
-        x = self.x
-        Q = self.Q
-        B = self.B
+        H=self.H
+        R=self.R
+        F=self.F
+        P=self.P
+        x=self.x
+        Q=self.Q
+        B=self.B
 
-        if x.ndim == 1:
-            xSmooth = zeros((len(zs), self.dim_x))
-            xhat = zeros((len(zs), self.dim_x))
+        if x.ndim==1:
+            xSmooth=zeros((len(zs),self.dim_x))
+            xhat=zeros((len(zs),self.dim_x))
         else:
-            xSmooth = zeros((len(zs), self.dim_x, 1))
-            xhat = zeros((len(zs), self.dim_x, 1))
-        for k, z in enumerate(zs):
+            xSmooth=zeros((len(zs),self.dim_x,1))
+            xhat=zeros((len(zs),self.dim_x,1))
+        for k,z in enumerate(zs):
 
             # predict step of normal Kalman filter
-            x_pre = dot(F, x)
+            x_pre=dot(F,x)
             if us is not None:
-                x_pre += dot(B, us[k])
+                x_pre+=dot(B,us[k])
 
-            P = dot(F, P).dot(F.T) + Q
+            P=dot(F,P).dot(F.T)+Q
 
             # update step of normal Kalman filter
-            y = z - dot(H, x_pre)
+            y=z-dot(H,x_pre)
 
-            S = dot(H, P).dot(H.T) + R
-            SI = inv(S)
+            S=dot(H,P).dot(H.T)+R
+            SI=inv(S)
 
-            K = dot(P, H.T).dot(SI)
+            K=dot(P,H.T).dot(SI)
 
-            x = x_pre + dot(K, y)
+            x=x_pre+dot(K,y)
 
-            I_KH = self._I - dot(K, H)
-            P = dot(I_KH, P).dot(I_KH.T) + dot(K, R).dot(K.T)
+            I_KH=self._I-dot(K,H)
+            P=dot(I_KH,P).dot(I_KH.T)+dot(K,R).dot(K.T)
 
-            xhat[k] = x.copy()
-            xSmooth[k] = x_pre.copy()
+            xhat[k]=x.copy()
+            xSmooth[k]=x_pre.copy()
 
             #compute invariants
-            HTSI = dot(H.T, SI)
-            F_LH = (F - dot(K, H)).T
+            HTSI=dot(H.T,SI)
+            F_LH=(F-dot(K,H)).T
 
-            if k >= N:
-                PS = P.copy() # smoothed P for step i
+            if k>=N:
+                PS=P.copy() # smoothed P for step i
                 for i in range(N):
-                    K = dot(PS, HTSI)  # smoothed gain
-                    PS = dot(PS, F_LH) # smoothed covariance
+                    K=dot(PS,HTSI)  # smoothed gain
+                    PS=dot(PS,F_LH) # smoothed covariance
 
-                    si = k-i
-                    xSmooth[si] = xSmooth[si] + dot(K, y)
+                    si=k-i
+                    xSmooth[si]=xSmooth[si]+dot(K,y)
             else:
                 # Some sources specify starting the fix lag smoother only
                 # after N steps have passed, some don't. I am getting far
                 # better results by starting only at step N.
-                xSmooth[k] = xhat[k]
+                xSmooth[k]=xhat[k]
 
-        return xSmooth, xhat
+        return xSmooth,xhat
 
     def __repr__(self):
         return '\n'.join([
             'FixedLagSmoother object',
-            pretty_str('dim_x', self.x),
-            pretty_str('dim_z', self.x),
-            pretty_str('N', self.N),
-            pretty_str('x', self.x),
-            pretty_str('x_s', self.x_s),
-            pretty_str('P', self.P),
-            pretty_str('F', self.F),
-            pretty_str('Q', self.Q),
-            pretty_str('R', self.R),
-            pretty_str('H', self.H),
-            pretty_str('K', self.K),
-            pretty_str('y', self.y),
-            pretty_str('S', self.S),
-            pretty_str('B', self.B),
+            pretty_str('dim_x',self.x),
+            pretty_str('dim_z',self.x),
+            pretty_str('N',self.N),
+            pretty_str('x',self.x),
+            pretty_str('x_s',self.x_s),
+            pretty_str('P',self.P),
+            pretty_str('F',self.F),
+            pretty_str('Q',self.Q),
+            pretty_str('R',self.R),
+            pretty_str('H',self.H),
+            pretty_str('K',self.K),
+            pretty_str('y',self.y),
+            pretty_str('S',self.S),
+            pretty_str('B',self.B),
             ])

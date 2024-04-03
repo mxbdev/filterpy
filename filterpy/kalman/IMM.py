@@ -5,10 +5,10 @@ Created on Mon Aug  6 07:53:34 2018
 
 @author: rlabbe
 """
-from __future__ import (absolute_import, division)
+from __future__ import (absolute_import,division)
 import numpy as np
-from numpy import dot, asarray, zeros, outer
-from filterpy.common import pretty_str
+from numpy import dot,asarray,zeros,outer
+from common.helpers import pretty_str
 
 
 class IMMEstimator(object):
@@ -129,35 +129,35 @@ class IMMEstimator(object):
     https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python
     """
 
-    def __init__(self, filters, mu, M):
-        if len(filters) < 2:
+    def __init__(self,filters,mu,M):
+        if len(filters)<2:
             raise ValueError('filters must contain at least two filters')
 
-        self.filters = filters
-        self.mu = asarray(mu) / np.sum(mu)
-        self.M = M
+        self.filters=filters
+        self.mu=asarray(mu)/np.sum(mu)
+        self.M=M
 
-        x_shape = filters[0].x.shape
+        x_shape=filters[0].x.shape
         for f in filters:
-            if x_shape != f.x.shape:
+            if x_shape!=f.x.shape:
                 raise ValueError(
                     'All filters must have the same state dimension')
 
-        self.x = zeros(filters[0].x.shape)
-        self.P = zeros(filters[0].P.shape)
-        self.N = len(filters)  # number of filters
-        self.likelihood = zeros(self.N)
-        self.omega = zeros((self.N, self.N))
+        self.x=zeros(filters[0].x.shape)
+        self.P=zeros(filters[0].P.shape)
+        self.N=len(filters)  # number of filters
+        self.likelihood=zeros(self.N)
+        self.omega=zeros((self.N,self.N))
         self._compute_mixing_probabilities()
 
         # initialize imm state estimate based on current filters
         self._compute_state_estimate()
-        self.x_prior = self.x.copy()
-        self.P_prior = self.P.copy()
-        self.x_post = self.x.copy()
-        self.P_post = self.P.copy()
+        self.x_prior=self.x.copy()
+        self.P_prior=self.P.copy()
+        self.x_post=self.x.copy()
+        self.P_post=self.P.copy()
 
-    def update(self, z):
+    def update(self,z):
         """
         Add a new measurement (z) to the Kalman filter. If z is None, nothing
         is changed.
@@ -170,22 +170,22 @@ class IMMEstimator(object):
         """
 
         # run update on each filter, and save the likelihood
-        for i, f in enumerate(self.filters):
+        for i,f in enumerate(self.filters):
             f.update(z)
-            self.likelihood[i] = f.likelihood
+            self.likelihood[i]=f.likelihood
 
         # update mode probabilities from total probability * likelihood
-        self.mu = self.cbar * self.likelihood
-        self.mu /= np.sum(self.mu)  # normalize
+        self.mu=self.cbar*self.likelihood
+        self.mu/=np.sum(self.mu)  # normalize
 
         self._compute_mixing_probabilities()
 
         # compute mixed IMM state and covariance and save posterior estimate
         self._compute_state_estimate()
-        self.x_post = self.x.copy()
-        self.P_post = self.P.copy()
+        self.x_post=self.x.copy()
+        self.P_post=self.P.copy()
 
-    def predict(self, u=None):
+    def predict(self,u=None):
         """
         Predict next state (prior) using the IMM state propagation
         equations.
@@ -199,30 +199,30 @@ class IMMEstimator(object):
         """
 
         # compute mixed initial conditions
-        xs, Ps = [], []
-        for i, (f, w) in enumerate(zip(self.filters, self.omega.T)):
-            x = zeros(self.x.shape)
-            for kf, wj in zip(self.filters, w):
-                x += kf.x * wj
+        xs,Ps=[],[]
+        for i,(f,w) in enumerate(zip(self.filters,self.omega.T)):
+            x=zeros(self.x.shape)
+            for kf,wj in zip(self.filters,w):
+                x+=kf.x*wj
             xs.append(x)
 
-            P = zeros(self.P.shape)
-            for kf, wj in zip(self.filters, w):
-                y = kf.x - x
-                P += wj * (outer(y, y) + kf.P)
+            P=zeros(self.P.shape)
+            for kf,wj in zip(self.filters,w):
+                y=kf.x-x
+                P+=wj*(outer(y,y)+kf.P)
             Ps.append(P)
 
         #  compute each filter's prior using the mixed initial conditions
-        for i, f in enumerate(self.filters):
+        for i,f in enumerate(self.filters):
             # propagate using the mixed state estimate and covariance
-            f.x = xs[i].copy()
-            f.P = Ps[i].copy()
+            f.x=xs[i].copy()
+            f.P=Ps[i].copy()
             f.predict(u)
 
         # compute mixed IMM state and covariance and save posterior estimate
         self._compute_state_estimate()
-        self.x_prior = self.x.copy()
-        self.P_prior = self.P.copy()
+        self.x_prior=self.x.copy()
+        self.P_prior=self.P.copy()
 
     def _compute_state_estimate(self):
         """
@@ -230,37 +230,37 @@ class IMMEstimator(object):
         the the mode probability self.mu to weight the estimates.
         """
         self.x.fill(0)
-        for f, mu in zip(self.filters, self.mu):
-            self.x += f.x * mu
+        for f,mu in zip(self.filters,self.mu):
+            self.x+=f.x*mu
 
         self.P.fill(0)
-        for f, mu in zip(self.filters, self.mu):
-            y = f.x - self.x
-            self.P += mu * (outer(y, y) + f.P)
+        for f,mu in zip(self.filters,self.mu):
+            y=f.x-self.x
+            self.P+=mu*(outer(y,y)+f.P)
 
     def _compute_mixing_probabilities(self):
         """
         Compute the mixing probability for each filter.
         """
 
-        self.cbar = dot(self.mu, self.M)
+        self.cbar=dot(self.mu,self.M)
         for i in range(self.N):
             for j in range(self.N):
-                self.omega[i, j] = (self.M[i, j]*self.mu[i]) / self.cbar[j]
+                self.omega[i,j]=(self.M[i,j]*self.mu[i])/self.cbar[j]
 
     def __repr__(self):
         return '\n'.join([
             'IMMEstimator object',
-            pretty_str('x', self.x),
-            pretty_str('P', self.P),
-            pretty_str('x_prior', self.x_prior),
-            pretty_str('P_prior', self.P_prior),
-            pretty_str('x_post', self.x_post),
-            pretty_str('P_post', self.P_post),
-            pretty_str('N', self.N),
-            pretty_str('mu', self.mu),
-            pretty_str('M', self.M),
-            pretty_str('cbar', self.cbar),
-            pretty_str('likelihood', self.likelihood),
-            pretty_str('omega', self.omega)
+            pretty_str('x',self.x),
+            pretty_str('P',self.P),
+            pretty_str('x_prior',self.x_prior),
+            pretty_str('P_prior',self.P_prior),
+            pretty_str('x_post',self.x_post),
+            pretty_str('P_post',self.P_post),
+            pretty_str('N',self.N),
+            pretty_str('mu',self.mu),
+            pretty_str('M',self.M),
+            pretty_str('cbar',self.cbar),
+            pretty_str('likelihood',self.likelihood),
+            pretty_str('omega',self.omega)
             ])
