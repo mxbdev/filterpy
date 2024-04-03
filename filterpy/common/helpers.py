@@ -16,9 +16,8 @@ This is licensed under an MIT license. See the readme.MD file
 for more information.
 """
 
-
 from __future__ import print_function
-from collections import defaultdict, deque
+from collections import defaultdict,deque
 import copy
 import inspect
 import numpy as np
@@ -94,26 +93,26 @@ class Saver(object):
     """
 
     def __init__(
-        self, kf, save_current=False, skip_private=False, skip_callable=False, ignore=()
+        self,kf,save_current=False,skip_private=False,skip_callable=False,ignore=()
     ):
         """Construct the save object, optionally saving the current
         state of the filter"""
         # pylint: disable=too-many-arguments
 
-        self._kf = kf
-        self._DL = defaultdict(list)
-        self._skip_private = skip_private
-        self._skip_callable = skip_callable
-        self._ignore = ignore
-        self._len = 0
+        self._kf=kf
+        self._DL=defaultdict(list)
+        self._skip_private=skip_private
+        self._skip_callable=skip_callable
+        self._ignore=ignore
+        self._len=0
 
         # need to save all properties since it is possible that the property
         # is computed only on access. I use this trick a lot to minimize
         # computing unused information.
-        properties = inspect.getmembers(
-            type(kf), lambda o: isinstance(o, property)
+        properties=inspect.getmembers(
+            type(kf),lambda o: isinstance(o,property)
         )
-        self.properties = [p for p in properties if p[0] not in ignore]
+        self.properties=[p for p in properties if p[0] not in ignore]
 
         if save_current:
             self.save()
@@ -121,15 +120,15 @@ class Saver(object):
     def save(self):
         """save the current state of the Kalman filter"""
 
-        kf = self._kf
+        kf=self._kf
 
         # force all attributes to be computed. this is only necessary
         # if the class uses properties that compute data only when
         # accessed
         for prop in self.properties:
-            self._DL[prop[0]].append(getattr(kf, prop[0]))
+            self._DL[prop[0]].append(getattr(kf,prop[0]))
 
-        v = copy.deepcopy(kf.__dict__)
+        v=copy.deepcopy(kf.__dict__)
 
         if self._skip_private:
             for key in list(v.keys()):
@@ -149,13 +148,13 @@ class Saver(object):
             self._DL[key].append(v[key])
 
         self.__dict__.update(self._DL)
-        self._len += 1
+        self._len+=1
 
-    def __getitem__(self, key):
+    def __getitem__(self,key):
         return self._DL[key]
 
-    def __setitem__(self, key, newvalue):
-        self._DL[key] = newvalue
+    def __setitem__(self,key,newvalue):
+        self._DL[key]=newvalue
         self.__dict__.update(self._DL)
 
     def __len__(self):
@@ -166,7 +165,7 @@ class Saver(object):
         """list of all keys"""
         return list(self._DL.keys())
 
-    def to_array(self, flatten=False):
+    def to_array(self,flatten=False):
         """
         Convert all saved attributes from a list to np.array.
 
@@ -180,7 +179,7 @@ class Saver(object):
         """
         for key in self.keys:
             try:
-                self.__dict__[key] = np.array(self._DL[key])
+                self.__dict__[key]=np.array(self._DL[key])
             except:
                 # get back to lists so we are in a valid state
                 self.__dict__.update(self._DL)
@@ -201,25 +200,25 @@ class Saver(object):
 
         for key in self.keys:
             try:
-                arr = self.__dict__[key]
-                shape = arr.shape
-                if shape[2] == 1:
-                    self.__dict__[key] = arr.reshape(shape[0], shape[1])
-                arr = self.__dict__[key]
-                shape = arr.shape
-                if len(shape) == 2 and shape[1] == 1:
-                    self.__dict__[key] = arr.ravel()
+                arr=self.__dict__[key]
+                shape=arr.shape
+                if shape[2]==1:
+                    self.__dict__[key]=arr.reshape(shape[0],shape[1])
+                arr=self.__dict__[key]
+                shape=arr.shape
+                if len(shape)==2 and shape[1]==1:
+                    self.__dict__[key]=arr.ravel()
             except:
                 # not an ndarray or not a column vector
                 pass
 
     def __repr__(self):
         return "<Saver object at {}\n  Keys: {}>".format(
-            hex(id(self)), " ".join(self.keys)
+            hex(id(self))," ".join(self.keys)
         )
 
 
-def runge_kutta4(y, x, dx, f):
+def runge_kutta4(y,x,dx,f):
     """computes 4th order Runge-Kutta for dy/dx.
 
     Parameters
@@ -237,15 +236,15 @@ def runge_kutta4(y, x, dx, f):
 
     """
 
-    k1 = dx * f(y, x)
-    k2 = dx * f(y + 0.5 * k1, x + 0.5 * dx)
-    k3 = dx * f(y + 0.5 * k2, x + 0.5 * dx)
-    k4 = dx * f(y + k3, x + dx)
+    k1=dx*f(y,x)
+    k2=dx*f(y+0.5*k1,x+0.5*dx)
+    k3=dx*f(y+0.5*k2,x+0.5*dx)
+    k4=dx*f(y+k3,x+dx)
 
-    return y + (k1 + 2 * k2 + 2 * k3 + k4) / 6.0
+    return y+(k1+2*k2+2*k3+k4)/6.0
 
 
-def pretty_str(label, arr):
+def pretty_str(label,arr):
     """
     Generates a pretty printed NumPy array with an assignment. Optionally
     transposes column vectors so they are drawn on one line. Strictly speaking
@@ -266,44 +265,44 @@ def pretty_str(label, arr):
     def is_col(a):
         """return true if a is a column vector"""
         try:
-            return a.shape[0] > 1 and a.shape[1] == 1
-        except (AttributeError, IndexError):
+            return a.shape[0]>1 and a.shape[1]==1
+        except (AttributeError,IndexError):
             return False
 
     # display empty lists correctly
     try:
-        if len(arr) == 0:
-            return label + " = " + str(type(arr)())
+        if len(arr)==0:
+            return label+" = "+str(type(arr)())
     except TypeError:
         pass
 
     if type(arr) is list or type(arr) is tuple or type(arr) is deque:
         return "\n".join(
-            [pretty_str(label + "[" + str(i) + "]", x) for (i, x) in enumerate(arr)]
+            [pretty_str(label+"["+str(i)+"]",x) for (i,x) in enumerate(arr)]
         )
 
     if label is None:
-        label = ""
+        label=""
 
     if label:
-        label += " = "
+        label+=" = "
 
     if is_col(arr):
-        return label + str(arr.T).replace("\n", "") + ".T"
+        return label+str(arr.T).replace("\n","")+".T"
 
-    rows = str(arr).split("\n")
+    rows=str(arr).split("\n")
     if not rows:
         return ""
 
-    s = label + rows[0]
-    pad = " " * len(label)
+    s=label+rows[0]
+    pad=" " * len(label)
     for line in rows[1:]:
-        s = s + "\n" + pad + line
+        s=s+"\n"+pad+line
 
     return s
 
 
-def pprint(label, arr, **kwargs):
+def pprint(label,arr,**kwargs):
     """pretty prints an NumPy array using the function pretty_str. Keyword
     arguments are passed to the print() function.
 
@@ -318,26 +317,26 @@ def pprint(label, arr, **kwargs):
            [0.1 5. ]]
     """
 
-    print(pretty_str(label, arr), **kwargs)
+    print(pretty_str(label,arr),**kwargs)
 
 
-def reshape_z(z, dim_z, ndim):
+def reshape_z(z,dim_z,ndim):
     """ensure z is a (dim_z, 1) shaped vector"""
 
-    z = np.atleast_2d(z)
-    if z.shape[1] == dim_z:
-        z = z.T
+    z=np.atleast_2d(z)
+    if z.shape[1]==dim_z:
+        z=z.T
 
-    if z.shape != (dim_z, 1):
+    if z.shape!=(dim_z,1):
         raise ValueError(
-            "z (shape {}) must be convertible to shape ({}, 1)".format(z.shape, dim_z)
+            "z (shape {}) must be convertible to shape ({}, 1)".format(z.shape,dim_z)
         )
 
-    if ndim == 1:
-        z = z[:, 0]
+    if ndim==1:
+        z=z[:,0]
 
-    if ndim == 0:
-        z = z[0, 0]
+    if ndim==0:
+        z=z[0,0]
 
     return z
 
@@ -372,18 +371,18 @@ def inv_diagonal(S):
     >>> kf.inv = inv_diagonal  # S is 1x1, so safely diagonal
     """
 
-    S = np.asarray(S)
+    S=np.asarray(S)
 
-    if S.ndim != 2 or S.shape[0] != S.shape[1]:
+    if S.ndim!=2 or S.shape[0]!=S.shape[1]:
         raise ValueError("S must be a square Matrix")
 
-    si = np.zeros(S.shape)
+    si=np.zeros(S.shape)
     for i in range(len(S)):
-        si[i, i] = 1.0 / S[i, i]
+        si[i,i]=1.0/S[i,i]
     return si
 
 
-def outer_product_sum(A, B=None):
+def outer_product_sum(A,B=None):
     r"""
     Computes the sum of the outer products of the rows in A and B
 
@@ -431,13 +430,13 @@ def outer_product_sum(A, B=None):
     """
 
     if B is None:
-        B = A
+        B=A
 
-    outer = np.einsum("ij,ik->ijk", A, B)
-    return np.sum(outer, axis=0)
+    outer=np.einsum("ij,ik->ijk",A,B)
+    return np.sum(outer,axis=0)
 
 
-def compare_kf(kf1, kf2, log=True, **kwargs):
+def compare_kf(kf1,kf2,log=True,**kwargs):
     """Compare two Kalman filters.
 
     For each variable each object has in common (x, P, S, K, etc) compare
@@ -448,30 +447,30 @@ def compare_kf(kf1, kf2, log=True, **kwargs):
     """
 
     # get variables common to both objects
-    v1, v2 = vars(kf1), vars(kf2)
-    k1, k2 = set(v1.keys()), set(v2.keys())
-    attrs = k2.intersection(k1)
+    v1,v2=vars(kf1),vars(kf2)
+    k1,k2=set(v1.keys()),set(v2.keys())
+    attrs=k2.intersection(k1)
 
-    different_keys = []
+    different_keys=[]
     for attr in attrs:
-        if attr[0] == "_":
+        if attr[0]=="_":
             continue
 
-        if not np.allclose(v1[attr], v2[attr], **kwargs):
+        if not np.allclose(v1[attr],v2[attr],**kwargs):
             if log:
-                print(attr, "is different")
-                print(pretty_str(attr, v1[attr]))
-                print(pretty_str(attr, v2[attr]))
+                print(attr,"is different")
+                print(pretty_str(attr,v1[attr]))
+                print(pretty_str(attr,v2[attr]))
                 print()
             different_keys.append(attr)
 
-    if len(different_keys) > 0:
-        return different
+    if len(different_keys)>0:
+        return different_keys  #return different -MB 2024
     else:
         return None
 
 
-def copy_states(dst, src):
+def copy_states(dst,src):
     """Copy filter states from `src` to `dst`.
 
     for each variable that `dst` and `src` have in common, use
@@ -496,31 +495,31 @@ def copy_states(dst, src):
             ...
     """
     # get variables common to both objects
-    v1, v2 = vars(dst), vars(src)
-    k1, k2 = set(v1.keys()), set(v2.keys())
-    attrs = k2.intersection(k1)
+    v1,v2=vars(dst),vars(src)
+    k1,k2=set(v1.keys()),set(v2.keys())
+    attrs=k2.intersection(k1)
 
     for key in attrs:
-        val = getattr(src, key)
-        if type(val).__name__ not in ["method", "function"]:
-            dst.__dict__[key] = copy.deepcopy(val)
+        val=getattr(src,key)
+        if type(val).__name__ not in ["method","function"]:
+            dst.__dict__[key]=copy.deepcopy(val)
 
 
-def repr_string(obj, private=True):
+def repr_string(obj,private=True):
     """Generate a __repr_ string for an filter object.
 
     It will pretty print numpy arrays to be readable, and display lists
     with indexed values. It also gathers up all properties.
     """
 
-    keys = obj.__dir__()
-    keys = [key for key in keys if key[:2] != "__"]
+    keys=obj.__dir__()
+    keys=[key for key in keys if key[:2]!="__"]
     if not private:
-        keys = [key for key in keys if key[0] != "_"]
+        keys=[key for key in keys if key[0]!="_"]
 
-    s = []
+    s=[]
     for key in keys:
-        val = getattr(obj, key)
-        if type(val).__name__ not in ["method", "function"]:
-            s.append(pretty_str(key, val))
-    return type(obj).__name__ + " object\n" + "\n".join(s)
+        val=getattr(obj,key)
+        if type(val).__name__ not in ["method","function"]:
+            s.append(pretty_str(key,val))
+    return type(obj).__name__+" object\n"+"\n".join(s)

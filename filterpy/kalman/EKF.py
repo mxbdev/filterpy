@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=invalid-name,too-many-instance-attributes, too-many-arguments
 
-
 """Copyright 2015 Roger R Labbe Jr.
 
 FilterPy library.
@@ -17,16 +16,16 @@ This is licensed under an MIT license. See the readme.MD file
 for more information.
 """
 
-from __future__ import (absolute_import, division, unicode_literals)
+from __future__ import (absolute_import,division,unicode_literals)
 
 from copy import deepcopy
-from math import log, exp, sqrt
+from math import log,exp,sqrt
 import sys
 import numpy as np
-from numpy import dot, zeros, eye
+from numpy import dot,zeros,eye
 import scipy.linalg as linalg
-from filterpy.stats import logpdf
-from filterpy.common import pretty_str, reshape_z
+from stats.stats import logpdf
+from common.helpers import pretty_str,reshape_z
 
 
 class ExtendedKalmanFilter(object):
@@ -129,47 +128,47 @@ class ExtendedKalmanFilter(object):
     https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python
     """
 
-    def __init__(self, dim_x, dim_z, dim_u=0):
+    def __init__(self,dim_x,dim_z,dim_u=0):
 
-        self.dim_x = dim_x
-        self.dim_z = dim_z
-        self.dim_u = dim_u
+        self.dim_x=dim_x
+        self.dim_z=dim_z
+        self.dim_u=dim_u
 
-        self.x = zeros((dim_x, 1)) # state
-        self.P = eye(dim_x)        # uncertainty covariance
-        self.B = 0                 # control transition matrix
-        self.F = np.eye(dim_x)     # state transition matrix
-        self.R = eye(dim_z)        # state uncertainty
-        self.Q = eye(dim_x)        # process uncertainty
-        self.y = zeros((dim_z, 1)) # residual
+        self.x=zeros((dim_x,1)) # state
+        self.P=eye(dim_x)        # uncertainty covariance
+        self.B=0                 # control transition matrix
+        self.F=np.eye(dim_x)     # state transition matrix
+        self.R=eye(dim_z)        # state uncertainty
+        self.Q=eye(dim_x)        # process uncertainty
+        self.y=zeros((dim_z,1)) # residual
 
-        z = np.array([None]*self.dim_z)
-        self.z = reshape_z(z, self.dim_z, self.x.ndim)
+        z=np.array([None]*self.dim_z)
+        self.z=reshape_z(z,self.dim_z,self.x.ndim)
 
         # gain and residual are computed during the innovation step. We
         # save them so that in case you want to inspect them for various
         # purposes
-        self.K = np.zeros(self.x.shape) # kalman gain
-        self.y = zeros((dim_z, 1))
-        self.S = np.zeros((dim_z, dim_z))   # system uncertainty
-        self.SI = np.zeros((dim_z, dim_z))  # inverse system uncertainty
+        self.K=np.zeros(self.x.shape) # kalman gain
+        self.y=zeros((dim_z,1))
+        self.S=np.zeros((dim_z,dim_z))   # system uncertainty
+        self.SI=np.zeros((dim_z,dim_z))  # inverse system uncertainty
 
         # identity matrix. Do not alter this.
-        self._I = np.eye(dim_x)
+        self._I=np.eye(dim_x)
 
-        self._log_likelihood = log(sys.float_info.min)
-        self._likelihood = sys.float_info.min
-        self._mahalanobis = None
+        self._log_likelihood=log(sys.float_info.min)
+        self._likelihood=sys.float_info.min
+        self._mahalanobis=None
 
         # these will always be a copy of x,P after predict() is called
-        self.x_prior = self.x.copy()
-        self.P_prior = self.P.copy()
+        self.x_prior=self.x.copy()
+        self.P_prior=self.P.copy()
 
         # these will always be a copy of x,P after update() is called
-        self.x_post = self.x.copy()
-        self.P_post = self.P.copy()
+        self.x_post=self.x.copy()
+        self.P_post=self.P.copy()
 
-    def predict_update(self, z, HJacobian, Hx, args=(), hx_args=(), u=0):
+    def predict_update(self,z,HJacobian,Hx,args=(),hx_args=(),u=0):
         """ Performs the predict/update innovation of the extended Kalman
         filter.
 
@@ -203,55 +202,55 @@ class ExtendedKalmanFilter(object):
         """
         #pylint: disable=too-many-locals
 
-        if not isinstance(args, tuple):
-            args = (args,)
+        if not isinstance(args,tuple):
+            args=(args,)
 
-        if not isinstance(hx_args, tuple):
-            hx_args = (hx_args,)
+        if not isinstance(hx_args,tuple):
+            hx_args=(hx_args,)
 
-        if np.isscalar(z) and self.dim_z == 1:
-            z = np.asarray([z], float)
+        if np.isscalar(z) and self.dim_z==1:
+            z=np.asarray([z],float)
 
-        F = self.F
-        B = self.B
-        P = self.P
-        Q = self.Q
-        R = self.R
-        x = self.x
+        F=self.F
+        B=self.B
+        P=self.P
+        Q=self.Q
+        R=self.R
+        x=self.x
 
-        H = HJacobian(x, *args)
+        H=HJacobian(x,*args)
 
         # predict step
-        x = dot(F, x) + dot(B, u)
-        P = dot(F, P).dot(F.T) + Q
+        x=dot(F,x)+dot(B,u)
+        P=dot(F,P).dot(F.T)+Q
 
         # save prior
-        self.x_prior = np.copy(self.x)
-        self.P_prior = np.copy(self.P)
+        self.x_prior=np.copy(self.x)
+        self.P_prior=np.copy(self.P)
 
         # update step
-        PHT = dot(P, H.T)
-        self.S = dot(H, PHT) + R
-        self.SI = linalg.inv(self.S)
-        self.K = dot(PHT, self.SI)
+        PHT=dot(P,H.T)
+        self.S=dot(H,PHT)+R
+        self.SI=linalg.inv(self.S)
+        self.K=dot(PHT,self.SI)
 
-        self.y = z - Hx(x, *hx_args)
-        self.x = x + dot(self.K, self.y)
+        self.y=z-Hx(x,*hx_args)
+        self.x=x+dot(self.K,self.y)
 
-        I_KH = self._I - dot(self.K, H)
-        self.P = dot(I_KH, P).dot(I_KH.T) + dot(self.K, R).dot(self.K.T)
+        I_KH=self._I-dot(self.K,H)
+        self.P=dot(I_KH,P).dot(I_KH.T)+dot(self.K,R).dot(self.K.T)
 
         # save measurement and posterior state
-        self.z = deepcopy(z)
-        self.x_post = self.x.copy()
-        self.P_post = self.P.copy()
+        self.z=deepcopy(z)
+        self.x_post=self.x.copy()
+        self.P_post=self.P.copy()
 
         # set to None to force recompute
-        self._log_likelihood = None
-        self._likelihood = None
-        self._mahalanobis = None
+        self._log_likelihood=None
+        self._likelihood=None
+        self._mahalanobis=None
 
-    def update(self, z, HJacobian, Hx, R=None, args=(), hx_args=(),
+    def update(self,z,HJacobian,Hx,R=None,args=(),hx_args=(),
                residual=np.subtract):
         """ Performs the update innovation of the extended Kalman filter.
 
@@ -295,62 +294,62 @@ class ExtendedKalmanFilter(object):
         """
 
         if z is None:
-            self.z = np.array([[None]*self.dim_z]).T
-            self.x_post = self.x.copy()
-            self.P_post = self.P.copy()
+            self.z=np.array([[None]*self.dim_z]).T
+            self.x_post=self.x.copy()
+            self.P_post=self.P.copy()
             return
 
-        if not isinstance(args, tuple):
-            args = (args,)
+        if not isinstance(args,tuple):
+            args=(args,)
 
-        if not isinstance(hx_args, tuple):
-            hx_args = (hx_args,)
+        if not isinstance(hx_args,tuple):
+            hx_args=(hx_args,)
 
         if R is None:
-            R = self.R
+            R=self.R
         elif np.isscalar(R):
-            R = eye(self.dim_z) * R
+            R=eye(self.dim_z)*R
 
-        if np.isscalar(z) and self.dim_z == 1:
-            z = np.asarray([z], float)
+        if np.isscalar(z) and self.dim_z==1:
+            z=np.asarray([z],float)
 
-        H = HJacobian(self.x, *args)
+        H=HJacobian(self.x,*args)
 
-        PHT = dot(self.P, H.T)
-        self.S = dot(H, PHT) + R
-        self.SI = linalg.inv(self.S)
-        self.K = PHT.dot(self.SI)
+        PHT=dot(self.P,H.T)
+        self.S=dot(H,PHT)+R
+        self.SI=linalg.inv(self.S)
+        self.K=PHT.dot(self.SI)
 
-        hx = Hx(self.x, *hx_args)
-        self.y = residual(z, hx)
-        self.x = self.x + dot(self.K, self.y)
+        hx=Hx(self.x,*hx_args)
+        self.y=residual(z,hx)
+        self.x=self.x+dot(self.K,self.y)
 
         # P = (I-KH)P(I-KH)' + KRK' is more numerically stable
         # and works for non-optimal K vs the equation
         # P = (I-KH)P usually seen in the literature.
-        I_KH = self._I - dot(self.K, H)
-        self.P = dot(I_KH, self.P).dot(I_KH.T) + dot(self.K, R).dot(self.K.T)
+        I_KH=self._I-dot(self.K,H)
+        self.P=dot(I_KH,self.P).dot(I_KH.T)+dot(self.K,R).dot(self.K.T)
 
         # set to None to force recompute
-        self._log_likelihood = None
-        self._likelihood = None
-        self._mahalanobis = None
+        self._log_likelihood=None
+        self._likelihood=None
+        self._mahalanobis=None
 
         # save measurement and posterior state
-        self.z = deepcopy(z)
-        self.x_post = self.x.copy()
-        self.P_post = self.P.copy()
+        self.z=deepcopy(z)
+        self.x_post=self.x.copy()
+        self.P_post=self.P.copy()
 
-    def predict_x(self, u=0):
+    def predict_x(self,u=0):
         """
         Predicts the next state of X. If you need to
         compute the next state yourself, override this function. You would
         need to do this, for example, if the usual Taylor expansion to
         generate F is not providing accurate results for you.
         """
-        self.x = dot(self.F, self.x) + dot(self.B, u)
+        self.x=dot(self.F,self.x)+dot(self.B,u)
 
-    def predict(self, u=0):
+    def predict(self,u=0):
         """
         Predict next state (prior) using the Kalman filter state propagation
         equations.
@@ -364,11 +363,11 @@ class ExtendedKalmanFilter(object):
         """
 
         self.predict_x(u)
-        self.P = dot(self.F, self.P).dot(self.F.T) + self.Q
+        self.P=dot(self.F,self.P).dot(self.F.T)+self.Q
 
         # save prior
-        self.x_prior = np.copy(self.x)
-        self.P_prior = np.copy(self.P)
+        self.x_prior=np.copy(self.x)
+        self.P_prior=np.copy(self.P)
 
     @property
     def log_likelihood(self):
@@ -377,7 +376,7 @@ class ExtendedKalmanFilter(object):
         """
 
         if self._log_likelihood is None:
-            self._log_likelihood = logpdf(x=self.y, cov=self.S)
+            self._log_likelihood=logpdf(x=self.y,cov=self.S)
         return self._log_likelihood
 
     @property
@@ -390,9 +389,9 @@ class ExtendedKalmanFilter(object):
         number >= sys.float_info.min.
         """
         if self._likelihood is None:
-            self._likelihood = exp(self.log_likelihood)
-            if self._likelihood == 0:
-                self._likelihood = sys.float_info.min
+            self._likelihood=exp(self.log_likelihood)
+            if self._likelihood==0:
+                self._likelihood=sys.float_info.min
         return self._likelihood
 
     @property
@@ -406,23 +405,23 @@ class ExtendedKalmanFilter(object):
         mahalanobis : float
         """
         if self._mahalanobis is None:
-            self._mahalanobis = sqrt(float(dot(dot(self.y.T, self.SI), self.y)))
+            self._mahalanobis=sqrt(float(dot(dot(self.y.T,self.SI),self.y)))
         return self._mahalanobis
 
     def __repr__(self):
         return '\n'.join([
             'KalmanFilter object',
-            pretty_str('x', self.x),
-            pretty_str('P', self.P),
-            pretty_str('x_prior', self.x_prior),
-            pretty_str('P_prior', self.P_prior),
-            pretty_str('F', self.F),
-            pretty_str('Q', self.Q),
-            pretty_str('R', self.R),
-            pretty_str('K', self.K),
-            pretty_str('y', self.y),
-            pretty_str('S', self.S),
-            pretty_str('likelihood', self.likelihood),
-            pretty_str('log-likelihood', self.log_likelihood),
-            pretty_str('mahalanobis', self.mahalanobis)
+            pretty_str('x',self.x),
+            pretty_str('P',self.P),
+            pretty_str('x_prior',self.x_prior),
+            pretty_str('P_prior',self.P_prior),
+            pretty_str('F',self.F),
+            pretty_str('Q',self.Q),
+            pretty_str('R',self.R),
+            pretty_str('K',self.K),
+            pretty_str('y',self.y),
+            pretty_str('S',self.S),
+            pretty_str('likelihood',self.likelihood),
+            pretty_str('log-likelihood',self.log_likelihood),
+            pretty_str('mahalanobis',self.mahalanobis)
             ])

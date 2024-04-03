@@ -15,7 +15,7 @@ https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python
 This is licensed under an MIT license. See the readme.MD file
 for more information.
 """
-from __future__ import (absolute_import, division, print_function,
+from __future__ import (absolute_import,division,print_function,
                         unicode_literals)
 
 import math
@@ -23,42 +23,42 @@ import numpy as np
 from scipy.linalg import block_diag
 
 
-def kinematic_state_transition(order, dt):
+def kinematic_state_transition(order,dt):
     """
     create a state transition matrix of a given order for a given time
     step `dt`.
     """
 
-    if not(order >= 0 and int(order) == order):
+    if not(order>=0 and int(order)==order):
         raise ValueError("order must be an int >= 0")
 
     # hard code common cases for computational efficiency
-    if order == 0:
+    if order==0:
         return np.array([[1.]])
-    if order == 1:
-        return np.array([[1., dt],
-                         [0., 1.]])
-    if order == 2:
-        return np.array([[1., dt, 0.5*dt*dt],
-                         [0., 1., dt],
-                         [0., 0., 1.]])
+    if order==1:
+        return np.array([[1.,dt],
+                         [0.,1.]])
+    if order==2:
+        return np.array([[1.,dt,0.5*dt*dt],
+                         [0.,1.,dt],
+                         [0.,0.,1.]])
 
     # grind it out computationally....
-    N = order + 1
+    N=order+1
 
-    F = np.zeros((N, N))
+    F=np.zeros((N,N))
     # compute highest order row
     for n in range(N):
-        F[0, n] = float(dt**n) / math.factorial(n)
+        F[0,n]=float(dt**n)/math.factorial(n)
 
     # copy with a shift to get lower order rows
-    for j in range(1, N):
-        F[j, j:] = F[0, 0:-j]
+    for j in range(1,N):
+        F[j,j:]=F[0,0:-j]
 
     return F
 
 
-def kinematic_kf(dim, order, dt=1., dim_z=1, order_by_dim=True, kf=None):
+def kinematic_kf(dim,order,dt=1.,dim_z=1,order_by_dim=True,kf=None):
     """
     Returns a KalmanFilter using newtonian kinematics of arbitrary order
     for any number of dimensions. For example, a constant velocity filter
@@ -140,41 +140,41 @@ def kinematic_kf(dim, order, dt=1., dim_z=1, order_by_dim=True, kf=None):
         than KalmanFilter.
     """
 
-    from filterpy.kalman import KalmanFilter
+    from kalman.kalman_filter import KalmanFilter
 
-    if dim < 1:
+    if dim<1:
         raise ValueError("dim must be >= 1")
-    if order < 0:
+    if order<0:
         raise ValueError("order must be >= 0")
-    if dim_z < 1:
+    if dim_z<1:
         raise ValueError("dim_z must be >= 1")
 
-    dim_x = order + 1
+    dim_x=order+1
 
     if kf is None:
-        kf = KalmanFilter(dim_x=dim * dim_x, dim_z=dim_z)
-    assert kf.dim_x == dim * dim_x
-    assert kf.dim_z == dim_z
+        kf=KalmanFilter(dim_x=dim*dim_x,dim_z=dim_z)
+    assert kf.dim_x==dim*dim_x
+    assert kf.dim_z==dim_z
 
-    F = kinematic_state_transition(order, dt)
+    F=kinematic_state_transition(order,dt)
     if order_by_dim:
-        diag = [F] * dim
-        kf.F = block_diag(*diag)
+        diag=[F]*dim
+        kf.F=block_diag(*diag)
     else:
         kf.F.fill(0.0)
-        for i, x in enumerate(F.ravel()):
-            f = np.eye(dim) * x
+        for i,x in enumerate(F.ravel()):
+            f=np.eye(dim)*x
 
-            ix, iy = (i // dim_x) * dim, (i % dim_x) * dim
-            kf.F[ix:ix+dim, iy:iy+dim] = f
+            ix,iy=(i//dim_x)*dim,(i%dim_x)*dim
+            kf.F[ix:ix+dim,iy:iy+dim]=f
 
     if order_by_dim:
         for i in range(dim_z):
             for j in range(dim):
-                kf.H[i, j * dim_x] = 1.
+                kf.H[i,j*dim_x]=1.
     else:
         for i in range(dim_z):
             for j in range(dim):
-                kf.H[i, j] = 1.
+                kf.H[i,j]=1.
 
     return kf
